@@ -55,7 +55,7 @@ pipeline {
 
                     } else {
                         echo 'Repo does NOT exist - Cloning the repo'
-                        sh 'git clone -b feature https://github.com/shay79il/DeveleapGitops.git'
+                        sh 'git clone https://github.com/shay79il/DeveleapGitops.git'
                     }
 
                 }
@@ -76,24 +76,13 @@ pipeline {
                 dir("DeveleapGitops/jenkins-demo"){
                     sh "git config --global user.email 'jenkins@ci.com'"
                     sh 'git remote set-url origin https://${GITHUB_TOKEN}@github.com/shay79il/DeveleapGitops'
-                    sh 'git checkout feature'
+                    sh 'git checkout main'
                     sh 'git add -A'
                     sh 'git commit -am "Updated image version for build - ${VERSION}"'
-                    sh 'git push origin feature'
+                    sh 'git push origin main'
                 }
             }
         }
         
-        stage ('(7) Raise PR'){
-            steps {
-                dir("DeveleapGitops"){
-                        sh 'gh pr create            \
-                            --fill                  \
-                            --base main             \
-                            --head feature          \
-                            --title "Updated image version for build - ${VERSION}"'
-                    }
-            }
-        }
     }
 }
