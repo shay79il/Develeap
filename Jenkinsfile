@@ -78,7 +78,7 @@ pipeline {
                     sh 'git remote set-url origin https://${GITHUB_TOKEN}@github.com/shay79il/DeveleapGitops'
                     sh 'git checkout main'
                     sh 'git add -A'
-                    sh 'git commit -am "Updated image version for build - ${VERSION}"'
+                    sh 'git commit -am "Updated image version for build  - ${VERSION}"'
                     sh 'git push origin main'
                 }
             }
