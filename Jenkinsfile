@@ -50,7 +50,7 @@ pipeline {
 
                         dir("DeveleapGitops") {
                             sh 'git config pull.rebase true'
-                            sh 'git pull https://github.com/shay79il/DeveleapGitops.git feature'
+                            sh 'git pull https://github.com/shay79il/DeveleapGitops.git main'
                         }
 
                     } else {
