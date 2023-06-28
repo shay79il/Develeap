@@ -4,7 +4,9 @@ pipeline {
     environment {
         IMAGE_NAME = "develeap"
         IMAGE_REPO = "public.ecr.aws/q1c0q0c4"
+        AWS_REGION = "us-east-1"
         VERSION = "${env.BUILD_NUMBER}"
+        GITHUB_TOKEN = credentials('github_token')
     }
 
     stages {
@@ -15,10 +17,10 @@ pipeline {
         }
         stage ('(2) Build image') {
             steps {
-                sh 'cd app'
-                sh 'docker build -t develeap .'
-                sh 'docker tag ${IMAGE_NAME}:latest ${IMAGE_REPO}/${IMAGE_NAME}:${VERSION}'
-                sh 'cd -'
+                dir("app"){
+                    sh 'docker build -t develeap .'
+                    sh 'docker tag ${IMAGE_NAME}:latest ${IMAGE_REPO}/${IMAGE_NAME}:${VERSION}'
+                }
             }
         }
     }
@@ -30,25 +32,37 @@ pipeline {
 
             stage ('(3) Push image to AWS ECR'){
                 steps {
-                    sh 'aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/q1c0q0c4'
+                    withCredentials([
+                        [
+                            $class: 'AmazonWebServicesCredentialsBinding',
+                            credentialsId: 'AWS Credentials - jenkins',
+                            accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                            secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
+                        ]
+                        ]) {
 
-                    sh 'docker push ${IMAGE_REPO}/${IMAGE_NAME}:${VERSION}'
+                            sh 'aws ecr-public get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${IMAGE_REPO}'
+                        }
+
+                        sh 'docker push ${IMAGE_REPO}/${IMAGE_NAME}:${VERSION}'
+                        sh 'pwd'
                 }
             }
             
             stage ('(4) Clone/Pull K8S repo'){
                 steps {
                     script{
+                        sh 'pwd'
                         if(fileExists('DeveleapGitops')) {
                             echo 'Cloned repo already exist - Pulling latest changes'
 
                             dir("DeveleapGitops") {
-                                sh 'git pull'
+                                sh 'git pull https://github.com/shay79il/DeveleapGitops.git feature'
                             }
 
                         } else {
                             echo 'Repo does NOT exist - Cloning the repo'
-                            git branch: 'feature', url: 'https://github.com/shay79il/DeveleapGitops'
+                            sh 'git clone -b feature https://github.com/shay79il/DeveleapGitops.git'
                         }
 
                     }
@@ -68,7 +82,7 @@ pipeline {
                 steps {
                     dir("DeveleapGitops/jenkins-demo"){
                         sh "git config --global user.email 'jenkins@ci.com'"
-                        sh 'git remote set-url origin https://github.com/shay79il/DeveleapGitops'
+                        sh 'git remote set-url origin https://github.com/shay79il/DeveleapGitops.git'
                         sh 'git checkout feature'
                         sh 'git add -A'
                         sh 'git commit -am "Updated image version for build - ${VERSION}"'
@@ -80,8 +94,12 @@ pipeline {
 
             stage ('(7) Raise PR'){
                 steps {
-                    dir("DeveleapGitops/jenkins-demo"){
-                        sh 'gh pr create --base main --head feature --title "Updated image version for build - ${VERSION}"'
+                    dir("DeveleapGitops"){
+                        sh 'gh pr create    \
+                            --token ${GITHUB_TOKEN}
+                            --base main     \
+                            --head feature  \
+                            --title "Updated image version for build - ${VERSION}"'
                     }
                 }
             }
