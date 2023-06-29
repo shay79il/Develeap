@@ -1,6 +1,4 @@
-# DeveleapCI
-==============
-
+# DeveleapCI ([DeveleapCD repo](https://github.com/shay79il/DeveleapGitops))
 
 Requirements:
 
